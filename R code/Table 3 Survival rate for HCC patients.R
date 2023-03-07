@@ -9,7 +9,6 @@ amonth <- 30.437
 ayear <- 365.2425
 
 
-
 ## survival models ####
 library(survival)
 
