@@ -33,6 +33,7 @@ If jcdate18~=. & jcdate3<fbrq_final<jcdate18 then intervalcan1=1;
 If jcdate18=. & jcdate3<fbrq_final<screen2 then intervalcan1=1;
 if a7="2" or a7="3" then intervalcan1=0;
 run;
+
 proc sql;create table interval1year as select * from interval1 where (intervaldeath1=1 or  intervalcan1=1);quit;
 data m2;set f10; if  a7~="3";run;
 proc sql;create table can1 as select * from interval1year where (intervalcan1=1 & (interval1year.iden1 in (select iden1 from m2)));quit;
