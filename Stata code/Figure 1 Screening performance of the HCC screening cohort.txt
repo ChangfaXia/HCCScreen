@@ -1,0 +1,45 @@
+/*Code for Figure 1: screening performance of the HCC screening cohort
+The flowchart of the program
+Most of the data were acquired from the stage of data clean
+Here we showed the main code to acquire the main data
+a7: HCC*/
+/*After data cleaning, we acquired the baseline datasets*/
+
+/*Initial records: N=16,913*/
+data del1;set f1;if  compress(a1exam)=""; length reason $50.;reason="Without finishing the baseline screening";run;/*331*/
+data del2;set f2; if compress(a1exam)="0" ; length reason $50.;reason="HBsAg sero-negativity ";run;
+data del3;set dcneg3; length reason $50.;reason="HBsAg sero-negativity";run;/*95*/
+proc import out=can datafile="C:\Users\Lenovo\Desktop\can.xlsx";run;
+data del4;set can;length iden1 $38;iden1=compress(iden);iden1=upcase(iden1);length reason $50.;reason="Prior diagnosis of cancer";run;/*347*/
+data del5;set f4; if aged>70 or aged<35;length reason $50.;reason="Age out of range ";run;/*60*/
+
+proc sort data=exam2017 nodupkey dupout=c1 out=exam1 ;
+by xmbmid;
+run;
+data del;set c1; reason="xid重复" ;run;/*5*/
+data del6;set del6; length reason $50.;reason="erroneous baseline data";run;/*12*/
+data del7;set f1;if iden=""; length reason $50.;reason="Did not respond to the invitation";run;/*1637*/
+
+/*Attended population: N=14,426
+final data f2017baseline*/
+proc freq data=f2017baseline;tables a7;run;/*141;1.0%*/
+
+/*We here showed the code to acquire interval cancer/death of the first round*/
+/*Similar code was applied in the other three rounds*/
+data interval1;set candeath;
+if jcdate18~=. & baseline<swrq_final<=jcdate18 then intervaldeath1=1;
+if jcdate18=. & baseline<swrq_final<=screen2 then intervaldeath1=1;
+If jcdate18~=. & jcdate3<fbrq_final<jcdate18 then intervalcan1=1;
+If jcdate18=. & jcdate3<fbrq_final<screen2 then intervalcan1=1;
+if a7="2" or a7="3" then intervalcan1=0;
+run;
+proc sql;create table interval1year as select * from interval1 where (intervaldeath1=1 or  intervalcan1=1);quit;
+data m2;set f10; if  a7~="3";run;
+proc sql;create table can1 as select * from interval1year where (intervalcan1=1 & (interval1year.iden1 in (select iden1 from m2)));quit;
+proc sql;create table death1 as select * from interval1year where (intervaldeath1=1 & (interval1year.iden1 in (select iden1 from f10)));quit;
+
+
+/*Detection rate by screening round*/
+proc freq data=f18;tables a7;run;
+proc freq data=f19;tables a7;run;
+proc freq data=f20;tables a7;run;
