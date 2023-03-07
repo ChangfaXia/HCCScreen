@@ -79,3 +79,4 @@ phi <- p2*(q*theta+1-q) / (theta*p) #true relative risk (φ) of death from the c
 pp <- (p1*(theta*q+1-q)*(1-p3))/((theta*q+1-q)*(theta+q*(1-theta))-p3*theta)
 HR.adj.length <- log(1-phi*pp)/log(1-pp) #HR
 print(round(HR.adj.length, 2))
+
