@@ -1,0 +1,167 @@
+
+/*Main code to produce Table 1, Software SAS, version 9.4
+Table 1: Characteristics of the eligible population
+All variables were handled as categorized variables based on common sense or medical reference value
+Here, we have shown how to divide age and ALB into several groups
+aged: age in continuous
+sex1: gender*/
+
+libname mm "D:\liver cancer cohort";
+
+data f1base;set mm.f2017baseline;run;/*N=14,426*/
+/*Showing mean and standard deviation*/
+proc sort data=f1base;by sex1;run;/*54.8 (9.0)*/
+proc means data=f1base; var aged;by sex1;run;
+proc means data=f1base; var aged;run;/*53.9 (9.1) in men and 55.7 (8.8) in women*/
+
+/*Number of participants and corresponding percentage*/
+data f2base;set f1base;
+	if aged<45  then category="1";
+    if 45<=aged<=54  then category="2";
+	if 55<=aged<=64  then category="3";
+	if aged>=65 then category="4";
+	alb1=alb*1;	
+	if alb1<40 then galb="1";
+	if alb1>=40 & alb1<=55 then galb="2";
+	if alb1>55 then galb="3";run;
+proc freq data=f2base;tables (category galb)*sex1;run;
+
+
+
+
+
+/******************************************************************************/
+/*Main code to produce Table 2, Software SAS, version 9.4
+Table 2: Screening performance by screening rounds
+Part I: Detection performance:
+We calculated the detection rate of HCC, the detection rate of cirrhosis, AFP level, and size group, stratified by screening round
+g1_2: cirrhosis
+a7: HCC*/
+
+libname mm "D:\liver cancer cohort";
+data base;set f1base;round="round1";
+	if afp_ng<20 then afp="0";else afp="1";
+	size=max(A5c3_1,A5c3_2); size1=size*1;
+	if a7="3" & size1<=2 & size1^="" then fq1="1";
+	if a7="3" & size1>2 & size1<=5 & size1^=""	 then fq1="2";
+	if a7="3" & size1>5 & size1^="" then fq1="3";run;
+
+data f2018;set mm.f18;round="round2";
+	if afp_ng<20 then afp="0";else afp="1";
+	size=max(A5c3_1,A5c3_2);size1=size*1;
+	if a7="3" & size1<=2 & size1^="" then fq1="1";
+	if a7="3" & size1>2 & size1<=5 & size1^=""	 then fq1="2";
+	if a7="3" & size1>5 & size1^="" then fq1="3";run;
+
+data f2019full;set mm.f19;round="round3";
+	if afp_ng<20 then afp="0";else afp="1";
+	size=max(A5c3_1,A5c3_2);size1=size*1;
+	if a7="3" & size1<=2 & size1^="" then fq1="1";
+	if a7="3" & size1>2 & size1<=5 & size1^=""	 then fq1="2";
+	if a7="3" & size1>5 & size1^="" then fq1="3";run;
+
+data f2020full;set mm.f20;round="round4";
+	if afp_ng<20 then afp="0";else afp="1";
+	size=max(A5c3_1,A5c3_2);size1=size*1;
+	if a7="3" & size1<=2 & size1^="" then fq1="1";
+	if a7="3" & size1>2 & size1<=5 & size1^=""	 then fq1="2";
+	if a7="3" & size1>5 & size1^="" then fq1="3";run;
+
+
+ods output  OneWayFreqs=Round1_freq;
+proc freq data=base;tables g1_2  a7 afp fq1;run;
+data Round1_freq;set Round1_freq;
+if G1_2="1" or a7="3" or fq1^="" or afp="1";
+keep table F_G1_2 a7 F_afp fq1 Frequency Percent screening; screening="round1";
+Percent=compress(round(Percent,0.1),"");run;
+
+
+ods output  OneWayFreqs=Round2_freq;
+proc freq data=f2018;tables g1_2 a7 fq1 afp;run;
+data Round2_freq;set Round2_freq;
+if G1_2="1" or a7="3" or fq1^="" or afp="1";
+keep table F_G1_2 a7 F_afp fq1 Frequency Percent screening; screening="round2";
+Percent=compress(round(Percent,0.1),"");run;
+
+
+ods output  OneWayFreqs=Round3_freq;
+proc freq data=f2019full;tables g1_2  fq1  a7 afp;run;
+data Round3_freq;set Round3_freq;
+if G1_2="1" or a7="3" or fq1^="" or afp="1";
+keep table F_G1_2 a7 F_afp fq1 Frequency Percent screening; screening="round3";
+Percent=compress(round(Percent,0.1),"");run;
+
+
+ods output  OneWayFreqs=Round4_freq;
+proc freq data=f2020full;tables g1_2  fq1  a7 afp;run;
+data Round4_freq;set Round4_freq;
+if G1_2="1"  or a7="3" or fq1^="" or afp="1";
+keep table F_G1_2  a7 F_afp fq1 Frequency Percent screening; screening="round4";
+Percent=compress(round(Percent,0.1),"");run;
+
+
+
+
+/*Part II: code to calculate sensitivity and specificity of AFP/US*/
+libname mm "D:\liver cancer cohort";
+data liverinterval;set mm.liverinterval1022;run;
+
+data gold_round1;set liverinterval;if intervalcan1="1";run;
+data gold_round2;set liverinterval;if intervalcan2="1";run;
+data gold_round3;set liverinterval;if intervalcan3="1";run;
+
+
+/*Round 1*/
+/*gold stanard: 141+79=220
+g2a_4: US diagnosis
+afp: afp diagnosis*/
+proc sql; create table spec1 as select * from mm.base where iden1 not  in (select iden1 from gold_round1);quit;
+proc freq data=spec1;tables a7;run;
+data gold_round1;set gold_round1;gold="1";run;
+
+data spec1;set spec1;if a7="3" then gold="1";	if gold="" then gold="0";;run;
+data sen_spec_round1;set spec1 gold_round1;	if g2a_4="" then g2a_4="0";
+	if afp_ng<20 then afp="0";else afp="1";
+	if gold="" then gold="0";run;
+proc freq data=sen_spec_round1;tables afp*gold;run;
+proc freq data=sen_spec_round1;tables g2a_4*gold;run;
+
+
+
+/*Round 2*/
+/*gold standard: 68+72=140*/
+proc sql; create table spec2 as select * from mm.f18 where iden1 not  in (select iden1 from gold_round2);quit;
+proc freq data=spec2;tables a7;run;
+data gold_round2;set gold_round2;gold="1";run;
+
+data spec2;set spec2;if a7="3" then gold="1";run;
+proc freq data=spec2;tables gold;run;
+
+data sen_spec_round2;set spec2 gold_round2;if g2a_4="" then g2a_4="0";	
+	if afp_ng<20 then afp="0";else afp="1";
+	if gold="" then gold="0";run;
+proc freq data=sen_spec_round2;tables afp*gold;run;
+proc freq data=sen_spec_round2;tables g2a_4*gold;run;
+
+
+
+/*Round 3*/
+/*gold standard:55+63=118*/
+proc sql; create table spec3 as select * from mm.f19 where iden1 not  in (select iden1 from gold_round3);quit;
+proc freq data=spec3;tables a7;run;
+data gold_round3;set gold_round3;gold="1";run;
+
+data spec3;set spec3;if a7="3" then gold="1";run;
+proc freq data=spec3;tables gold;run;
+
+data sen_spec_round3;set spec3 gold_round3;if g2a_4="" then g2a_4="0";	
+	if afp_ng<20 then afp="0";else afp="1";
+	if gold="" then gold="0";run;
+proc freq data=sen_spec_round3;tables gold;run;
+proc freq data=sen_spec_round3;tables g2a_4;run;
+
+proc freq data=sen_spec_round3;tables afp*gold;run;
+proc freq data=sen_spec_round3;tables g2a_4*gold;run;
+/*Similar codes were applied to calculate the combined sensitivity and specificity*/
+
+
