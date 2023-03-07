@@ -9,7 +9,6 @@ amonth <- 30.437
 ayear <- 365.2425
 
 
-
 ## ggplot theme ####
 library(Cairo)
 library(ggplot2)
